@@ -1,15 +1,7 @@
 {
   "mcpServers": {
     "supabase": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@supabase/mcp-server-supabase@latest",
-        "--supabase-url",
-        "SUBSTITUIR_PELA_TUA_SUPABASE_URL",
-        "--supabase-service-role-key",
-        "SUBSTITUIR_PELA_TUA_SERVICE_ROLE_KEY"
-      ]
+      "url": "https://mcp.supabase.com/mcp?project_ref=tegvtxpwwpbefaqqizyd"
     },
     "filesystem": {
       "command": "npx",
