@@ -420,6 +420,13 @@ export function OnboardingWizard({ mode = "onboarding" }: OnboardingWizardProps)
                   configurar via variáveis de ambiente no Vercel — a app usa DB ou env.
                 </AlertDescription>
               </Alert>
+              <Alert className="border-[#e6f2ec] bg-[#f6fffa]">
+                <AlertTitle className="text-[#007d3e]">Nada executa sem o teu ok</AlertTitle>
+                <AlertDescription className="text-[#54606b]">
+                  Ligar as keys não inicia agentes nem altera campanhas. Por defeito estás
+                  em modo Planeamento. Define limites em Controlo após o setup.
+                </AlertDescription>
+              </Alert>
             </div>
           )}
 

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
-import { adjustBid, pauseEntity } from "@/lib/integrations/google-ads";
-import { pauseAd, updateCampaignBudget } from "@/lib/integrations/meta-ads";
+import { executeAction } from "@/lib/agents/execute-action";
+import { getOwnerAgentSettings } from "@/lib/settings/agent-settings";
 
 const schema = z.object({
   action_id: z.string().uuid(),
@@ -33,38 +33,47 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (fetchError || !action) {
-    return NextResponse.json({ error: "Acção não encontrada ou não aprovada" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Acção não encontrada ou não aprovada" },
+      { status: 404 }
+    );
   }
 
-  let result: { success: boolean; message?: string } = { success: false };
+  const settings = await getOwnerAgentSettings();
 
   try {
-    if (action.platform === "google") {
-      if (action.action_type === "adjust_bid") {
-        result = await adjustBid(
-          action.entity_type as "keyword" | "ad_group",
-          action.entity_id,
-          (action.proposed_value as { adjustment_percent?: number })?.adjustment_percent ?? 0
-        );
-      } else if (action.action_type.includes("pause")) {
-        result = await pauseEntity(
-          action.entity_type as "campaign" | "ad_group" | "keyword",
-          action.entity_id
-        );
-      }
-    } else if (action.platform === "meta") {
-      if (action.action_type.includes("pause")) {
-        result = await pauseAd(action.entity_id);
-      } else if (action.action_type === "change_budget") {
-        const amount = (action.proposed_value as { amount_eur?: number })?.amount_eur ?? 0;
-        result = await updateCampaignBudget(action.entity_id, amount);
-      }
+    const result = await executeAction(
+      {
+        action_type: action.action_type,
+        platform: action.platform,
+        entity_type: action.entity_type,
+        entity_id: action.entity_id,
+        proposed_value: (action.proposed_value as Record<string, unknown>) ?? {},
+        current_value: (action.current_value as Record<string, unknown>) ?? {},
+        risk_level: action.risk_level ?? undefined,
+      },
+      settings
+    );
+
+    if (!result.success) {
+      await admin
+        .from("agent_actions")
+        .update({
+          status: "failed",
+          execution_result: { error: result.message ?? "Bloqueado pelos guardrails" },
+        })
+        .eq("id", action.id);
+
+      return NextResponse.json(
+        { error: result.message ?? "Execução bloqueada pelos guardrails" },
+        { status: 403 }
+      );
     }
 
     await admin
       .from("agent_actions")
       .update({
-        status: result.success ? "executed" : "failed",
+        status: "executed",
         executed_at: new Date().toISOString(),
         execution_result: result as unknown as import("@/types/database").Json,
       })

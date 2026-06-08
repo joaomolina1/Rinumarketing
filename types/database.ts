@@ -293,6 +293,34 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["integration_settings"]["Insert"]>;
         Relationships: [];
       };
+      agent_settings: {
+        Row: {
+          user_id: string;
+          mode: string;
+          agents_master_enabled: boolean;
+          google_agent_enabled: boolean;
+          meta_agent_enabled: boolean;
+          analytics_agent_enabled: boolean;
+          action_policies: Json;
+          max_budget_increase_per_action_eur: number;
+          max_daily_budget_increase_eur: number;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          mode?: string;
+          agents_master_enabled?: boolean;
+          google_agent_enabled?: boolean;
+          meta_agent_enabled?: boolean;
+          analytics_agent_enabled?: boolean;
+          action_policies?: Json;
+          max_budget_increase_per_action_eur?: number;
+          max_daily_budget_increase_eur?: number;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["agent_settings"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

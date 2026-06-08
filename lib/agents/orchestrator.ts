@@ -7,6 +7,9 @@ import { runMetaAgent } from "./meta-agent";
 import { runAnalyticsAgent } from "./analytics-agent";
 import { getRecentDecisions, saveDecision } from "./memory";
 import { notifySlack } from "@/lib/notifications/slack";
+import { getOwnerAgentSettings } from "@/lib/settings/agent-settings";
+import { classifyActions, getBudgetDelta } from "@/lib/agents/guardrails";
+import { executeAction } from "@/lib/agents/execute-action";
 
 export type TriggerType = "scheduled_daily" | "scheduled_weekly" | "manual" | "alert";
 
@@ -31,13 +34,6 @@ export interface OrchestratorOutput {
   completed_at: string;
   duration_ms: number;
 }
-
-const AUTO_APPROVE_RULES: Record<string, boolean> = {
-  adjust_bid_low: process.env.AUTO_APPROVE_ENABLED === "true",
-  pause_zero_conversion_keyword: process.env.AUTO_APPROVE_ENABLED === "true",
-};
-
-const MAX_BUDGET_CHANGE_AUTO_EUR = 50;
 
 const ORCHESTRATOR_SYSTEM_PROMPT = `
 És o orquestrador central do sistema de marketing digital da RINU.
@@ -87,18 +83,52 @@ export async function runOrchestrator(
   }
 
   const runId = runRecord.id;
+  const settings = await getOwnerAgentSettings();
 
   try {
+    if (!settings.agents_master_enabled) {
+      const completedAt = new Date();
+      const pausedMessage = "Agentes pausados pelo utilizador — nenhuma ação proposta ou executada.";
+      const output: OrchestratorOutput = {
+        run_id: runId,
+        trigger: input.trigger,
+        analysis_summary: pausedMessage,
+        actions_proposed: [],
+        actions_requiring_approval: [],
+        auto_approved_actions: [],
+        alerts: [pausedMessage],
+        agent_results: [],
+        total_budget_at_risk_eur: 0,
+        started_at: startedAt.toISOString(),
+        completed_at: completedAt.toISOString(),
+        duration_ms: completedAt.getTime() - startedAt.getTime(),
+      };
+
+      await supabase
+        .from("agent_runs")
+        .update({
+          status: "completed",
+          reasoning: pausedMessage,
+          output: output as unknown as Json,
+          completed_at: completedAt.toISOString(),
+        })
+        .eq("id", runId);
+
+      return output;
+    }
+
     const recentDecisions = await getRecentDecisions({ days: 14, limit: 20 });
 
     const [googleResult, metaResult, analyticsResult] = await Promise.allSettled([
-      input.focus_platform === "meta"
+      input.focus_platform === "meta" || !settings.google_agent_enabled
         ? Promise.resolve(null)
         : runGoogleAgent({ days: dateRangeDays, recent_decisions: recentDecisions }),
-      input.focus_platform === "google"
+      input.focus_platform === "google" || !settings.meta_agent_enabled
         ? Promise.resolve(null)
         : runMetaAgent({ days: dateRangeDays, recent_decisions: recentDecisions }),
-      runAnalyticsAgent({ days: dateRangeDays, recent_decisions: recentDecisions }),
+      !settings.analytics_agent_enabled
+        ? Promise.resolve(null)
+        : runAnalyticsAgent({ days: dateRangeDays, recent_decisions: recentDecisions }),
     ]);
 
     const agentResults: AgentResult[] = [];
@@ -139,27 +169,114 @@ export async function runOrchestrator(
       allActions,
       orchestratorAnalysis.priority_actions
     );
-    const { requiresApproval, autoApproved } = separateByApproval(prioritizedActions);
+    const { requiresApproval, autoApproved, blockedAlerts } = classifyActions(
+      prioritizedActions,
+      settings
+    );
+    allAlerts.push(...blockedAlerts);
     const totalBudgetAtRisk = calculateBudgetAtRisk(prioritizedActions);
 
-    if (prioritizedActions.length > 0) {
-      const actionsToInsert = prioritizedActions.map((action) => ({
-        run_id: runId,
-        agent_name: deriveAgentName(action.platform),
-        action_type: action.action_type,
-        platform: action.platform,
-        entity_type: action.entity_type,
-        entity_id: action.entity_id,
-        entity_name: action.entity_name ?? null,
-        current_value: action.current_value as unknown as Json,
-        proposed_value: action.proposed_value as unknown as Json,
-        reasoning: action.reasoning,
-        expected_impact: action.expected_impact,
-        risk_level: action.risk_level,
-        status: "pending" as ActionStatus,
-      }));
+    const buildRow = (action: AgentAction, status: ActionStatus) => ({
+      run_id: runId,
+      agent_name: deriveAgentName(action.platform),
+      action_type: action.action_type,
+      platform: action.platform,
+      entity_type: action.entity_type,
+      entity_id: action.entity_id,
+      entity_name: action.entity_name ?? null,
+      current_value: action.current_value as unknown as Json,
+      proposed_value: action.proposed_value as unknown as Json,
+      reasoning: action.reasoning,
+      expected_impact: action.expected_impact,
+      risk_level: action.risk_level,
+      status,
+    });
 
-      await supabase.from("agent_actions").insert(actionsToInsert);
+    const rowsToInsert = [
+      ...requiresApproval.map((action) => buildRow(action, "pending")),
+      ...autoApproved.map((action) => buildRow(action, "approved")),
+    ];
+
+    let insertedAutoRows: Array<{
+      id: string;
+      action_type: string;
+      platform: string;
+      entity_type: string;
+      entity_id: string;
+      proposed_value: Json;
+      current_value: Json;
+      risk_level: string | null;
+    }> = [];
+
+    if (rowsToInsert.length > 0) {
+      const { data: inserted } = await supabase
+        .from("agent_actions")
+        .insert(rowsToInsert)
+        .select("id, action_type, platform, entity_type, entity_id, proposed_value, current_value, risk_level, status");
+
+      insertedAutoRows =
+        inserted?.filter((row) => row.status === "approved").map((row) => ({
+          id: row.id,
+          action_type: row.action_type,
+          platform: row.platform,
+          entity_type: row.entity_type,
+          entity_id: row.entity_id,
+          proposed_value: row.proposed_value,
+          current_value: row.current_value,
+          risk_level: row.risk_level,
+        })) ?? [];
+    }
+
+    const executedAuto: AgentAction[] = [];
+    let budgetExecuted = 0;
+
+    for (const row of insertedAutoRows) {
+      const result = await executeAction(
+        {
+          action_type: row.action_type,
+          platform: row.platform,
+          entity_type: row.entity_type,
+          entity_id: row.entity_id,
+          proposed_value: (row.proposed_value as Record<string, unknown>) ?? {},
+          current_value: (row.current_value as Record<string, unknown>) ?? {},
+          risk_level: row.risk_level ?? undefined,
+        },
+        settings
+      );
+
+      await supabase
+        .from("agent_actions")
+        .update({
+          status: result.success ? "executed" : "failed",
+          executed_at: new Date().toISOString(),
+          execution_result: result as unknown as Json,
+        })
+        .eq("id", row.id);
+
+      const matched = autoApproved.find(
+        (a) => a.entity_id === row.entity_id && a.action_type === row.action_type
+      );
+      if (matched && result.success) {
+        executedAuto.push(matched);
+        budgetExecuted += getBudgetDelta(matched);
+      }
+    }
+
+    if (executedAuto.length > 0) {
+      const summary = executedAuto
+        .map(
+          (a) =>
+            `• [${a.platform.toUpperCase()}] ${a.action_type} em ${a.entity_name ?? a.entity_id}`
+        )
+        .join("\n");
+
+      await notifySlack({
+        level: "info",
+        title: `${executedAuto.length} acção(ões) executadas automaticamente`,
+        summary,
+        details: `Modo automático — budget movimentado: €${budgetExecuted.toFixed(2)}`,
+        run_id: runId,
+      });
     }
 
     await saveDecision({
@@ -297,34 +414,6 @@ function applyPriorities(
     const riskOrder = { low: 0, medium: 1, high: 2 };
     return (riskOrder[a.risk_level] ?? 1) - (riskOrder[b.risk_level] ?? 1);
   });
-}
-
-function separateByApproval(actions: AgentAction[]) {
-  const requiresApproval: AgentAction[] = [];
-  const autoApproved: AgentAction[] = [];
-
-  for (const action of actions) {
-    if (shouldAutoApprove(action)) {
-      autoApproved.push(action);
-    } else {
-      requiresApproval.push(action);
-    }
-  }
-
-  return { requiresApproval, autoApproved };
-}
-
-function shouldAutoApprove(action: AgentAction): boolean {
-  if (action.risk_level === "high") return false;
-
-  if (action.action_type === "change_budget") {
-    const proposed = (action.proposed_value.amount_eur as number) ?? 0;
-    const current = (action.current_value.amount_eur as number) ?? 0;
-    if (Math.abs(proposed - current) > MAX_BUDGET_CHANGE_AUTO_EUR) return false;
-  }
-
-  const ruleKey = `${action.action_type}_${action.risk_level}`;
-  return AUTO_APPROVE_RULES[ruleKey] === true;
 }
 
 function calculateBudgetAtRisk(actions: AgentAction[]): number {

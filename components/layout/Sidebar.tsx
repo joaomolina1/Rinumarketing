@@ -11,6 +11,7 @@ import {
   Megaphone,
   Search,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import { RinuLogo } from "@/components/brand/RinuLogo";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/agents", label: "Agentes", icon: Bot },
   { href: "/dashboard/agents/actions", label: "Aprovações", icon: CheckSquare },
+  { href: "/dashboard/agents/settings", label: "Controlo", icon: ShieldCheck },
   { href: "/dashboard/reports", label: "Relatórios", icon: FileText },
   { href: "/dashboard/settings", label: "Integrações", icon: Settings },
 ];
@@ -40,7 +42,9 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => {
           const active =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+            pathname === item.href ||
+            (item.href !== "/dashboard/agents" &&
+              pathname.startsWith(item.href + "/"));
           const Icon = item.icon;
 
           return (
