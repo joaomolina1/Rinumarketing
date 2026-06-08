@@ -6,16 +6,19 @@
 
 **Project:** `tegvtxpwwpbefaqqizyd` → https://tegvtxpwwpbefaqqizyd.supabase.co
 
-**Option A — MCP (recommended in Cursor):**
-1. Ensure `.cursor/mcp.json` contains the hosted Supabase MCP URL
-2. In Cursor: **Settings → Tools & MCP** → authorize Supabase MCP (browser login)
-3. Ask the agent: *"Run supabase/combined_migration.sql via MCP execute_sql"*
-
-**Option B — SQL Editor:**
+**Option A — SQL Editor (easiest, 2 minutes):**
 1. Open [SQL Editor](https://supabase.com/dashboard/project/tegvtxpwwpbefaqqizyd/sql/new)
 2. Paste and run `supabase/combined_migration.sql`
 3. **Authentication → Providers → Email** → disable "Confirm email" (for dev)
-4. Create admin user or use `admin@rinu.fun`
+4. Admin user already created: `admin@rinu.fun` / `RinuAdmin2026!`
+
+**Option B — CLI (needs database password, NOT the API secret key):**
+```bash
+export SUPABASE_DB_PASSWORD=your_db_password
+bash scripts/apply-migration.sh
+```
+
+**About MCP:** You do NOT need MCP. The hosted MCP (`mcp.supabase.com`) requires a browser OAuth login in Cursor that often fails in cloud agents. The secret API key (`sb_secret_...`) is enough for the app — it is NOT the database password.
 
 **API keys** (Project Settings → API):
 - `NEXT_PUBLIC_SUPABASE_URL` = `https://tegvtxpwwpbefaqqizyd.supabase.co`

@@ -1,22 +1,19 @@
 {
   "mcpServers": {
     "supabase": {
-      "url": "https://mcp.supabase.com/mcp?project_ref=tegvtxpwwpbefaqqizyd"
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--supabase-url",
+        "https://tegvtxpwwpbefaqqizyd.supabase.co",
+        "--supabase-service-role-key",
+        "USE_SECRET_KEY_FROM_ENV"
+      ]
     },
     "filesystem": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "."
-      ]
-    },
-    "sequential-thinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
     }
   }
 }
