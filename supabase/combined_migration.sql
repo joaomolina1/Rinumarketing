@@ -78,9 +78,9 @@ alter table daily_kpis enable row level security;
 drop policy if exists "Acesso autenticado" on google_campaigns;
 drop policy if exists "Acesso autenticado" on meta_campaigns;
 drop policy if exists "Acesso autenticado" on daily_kpis;
-create policy "Acesso autenticado" on google_campaigns for all using (auth.role() = 'authenticated');
-create policy "Acesso autenticado" on meta_campaigns for all using (auth.role() = 'authenticated');
-create policy "Acesso autenticado" on daily_kpis for all using (auth.role() = 'authenticated');
+create policy "Acesso autenticado" on google_campaigns for all to authenticated using (true) with check (true);
+create policy "Acesso autenticado" on meta_campaigns for all to authenticated using (true) with check (true);
+create policy "Acesso autenticado" on daily_kpis for all to authenticated using (true) with check (true);
 
 -- 003_agent_runs.sql
 create table if not exists agent_runs (
@@ -129,8 +129,8 @@ alter table agent_runs enable row level security;
 alter table agent_actions enable row level security;
 drop policy if exists "Acesso autenticado" on agent_runs;
 drop policy if exists "Acesso autenticado" on agent_actions;
-create policy "Acesso autenticado" on agent_runs for all using (auth.role() = 'authenticated');
-create policy "Acesso autenticado" on agent_actions for all using (auth.role() = 'authenticated');
+create policy "Acesso autenticado" on agent_runs for all to authenticated using (true) with check (true);
+create policy "Acesso autenticado" on agent_actions for all to authenticated using (true) with check (true);
 
 -- 004_reports.sql
 create table if not exists reports (
@@ -152,7 +152,12 @@ create table if not exists reports (
 
 alter table reports enable row level security;
 drop policy if exists "Acesso autenticado" on reports;
-create policy "Acesso autenticado" on reports for all using (auth.role() = 'authenticated');
+create policy "Acesso autenticado" on reports for all to authenticated using (true) with check (true);
+
+-- Expose tables to Data API (PostgREST)
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant select on all tables in schema public to anon;
 
 -- Trigger: auto-create profile on signup
 create or replace function public.handle_new_user()

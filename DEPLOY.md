@@ -4,13 +4,23 @@
 
 ### 1. Supabase
 
-1. Create project at [supabase.com/dashboard](https://supabase.com/dashboard) (EU region recommended)
-2. Open **SQL Editor** → paste and run `supabase/combined_migration.sql`
-3. Go to **Authentication → Users** → create admin user (email/password)
-4. Copy from **Project Settings → API**:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
+**Project:** `tegvtxpwwpbefaqqizyd` → https://tegvtxpwwpbefaqqizyd.supabase.co
+
+**Option A — MCP (recommended in Cursor):**
+1. Ensure `.cursor/mcp.json` contains the hosted Supabase MCP URL
+2. In Cursor: **Settings → Tools & MCP** → authorize Supabase MCP (browser login)
+3. Ask the agent: *"Run supabase/combined_migration.sql via MCP execute_sql"*
+
+**Option B — SQL Editor:**
+1. Open [SQL Editor](https://supabase.com/dashboard/project/tegvtxpwwpbefaqqizyd/sql/new)
+2. Paste and run `supabase/combined_migration.sql`
+3. **Authentication → Providers → Email** → disable "Confirm email" (for dev)
+4. Create admin user or use `admin@rinu.fun`
+
+**API keys** (Project Settings → API):
+- `NEXT_PUBLIC_SUPABASE_URL` = `https://tegvtxpwwpbefaqqizyd.supabase.co`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` = publishable key (`sb_publishable_...`)
+- `SUPABASE_SERVICE_ROLE_KEY` = secret key (`sb_secret_...`) — **required for agents/API routes**
 
 ### 2. Vercel
 
