@@ -1,0 +1,88 @@
+# RINU Marketing AI — Cursor Rules
+
+## Stack
+- Next.js 15 App Router (TypeScript strict)
+- Supabase (Postgres + Auth + Realtime)
+- Tailwind CSS + shadcn/ui
+- Claude API (Anthropic SDK) para todos os agentes LLM
+- Recharts para gráficos
+- Vercel para deploy
+
+## Arquitectura obrigatória
+
+### Rendering
+- Server Components por defeito em todas as páginas e layouts
+- "use client" apenas quando necessário: event handlers, hooks, browser APIs
+- Suspense + skeleton components para todos os estados de loading
+- Error boundaries em cada page.tsx
+
+### API e segurança
+- Todas as chamadas a APIs externas (Google, Meta, GA4, Claude) APENAS em API Routes ou Server Components
+- NUNCA chamar APIs externas do lado do cliente
+- Supabase server client (from @supabase/ssr) em Server Components e API Routes
+- Supabase browser client apenas em Client Components
+- SUPABASE_SERVICE_ROLE_KEY nunca exposta ao cliente
+- Validação Zod em TODOS os inputs de API Routes
+
+### Base de dados
+- Queries sempre via Supabase client tipado
+- Nunca SQL raw no frontend
+- RLS activado — service role key só em server-side
+- Após criar/alterar tabela: executar `npx supabase gen types typescript > types/database.ts`
+- Migrations numeradas: 001_, 002_, etc.
+
+### Agentes LLM
+- Cada agente em /lib/agents/[nome]-agent.ts
+- System prompt como constante no topo
+- Tools como array tipado
+- Usar @anthropic-ai/sdk com streaming para respostas longas
+- Guardar SEMPRE cada run em agent_runs com reasoning completo
+- Acções propostas em agent_actions com status 'pending'
+- NUNCA executar acções automaticamente sem aprovação (fase inicial)
+
+### Componentes
+- Props sempre com interface explícita em TypeScript
+- Componentes de UI genéricos em /components/ui (shadcn)
+- Componentes de domínio em /components/[domínio]/
+- Sem prop drilling > 2 níveis — usar Server Components com fetch directo
+
+## Formatação e estilo
+
+### Paleta de cores RINU
+- Primária: #E91E8C (RINU pink)
+- Secundária: #0070B0 (RINU blue)
+- Fundo: branco / cinza-50 (#F9FAFB)
+- Texto: gray-900 / gray-600
+- Sucesso: green-600, Erro: red-600, Aviso: amber-500
+
+### Tipografia
+- Fonte: Geist Sans (incluída pelo Next.js)
+- Heading: font-semibold
+- Corpo: font-normal, leading-relaxed
+
+### Internacionalização
+- Moedas: Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
+- Datas: format(date, 'dd/MM/yyyy', { locale: pt }) — usar date-fns
+- Percentagens: (value).toFixed(1) + '%'
+- Números grandes: Intl.NumberFormat('pt-PT').format(n)
+
+## Proibições
+
+- NÃO usar Pages Router — apenas App Router
+- NÃO usar Prisma — apenas Supabase client
+- NÃO usar chart libraries pesadas (Chart.js, Victory) — apenas Recharts
+- NÃO commitar .env.local
+- NÃO usar any no TypeScript
+- NÃO chamar APIs externas no cliente
+- NÃO criar componentes sem tipos
+
+## Ordem de implementação (seguir sempre)
+1. Schema Supabase + migrations → gerar types
+2. Autenticação (login + middleware)
+3. Integrações (Google Ads, Meta, GA4)
+4. Tools e prompts dos agentes
+5. API Routes
+6. Server Components (páginas)
+7. Client Components (interactividade)
+8. Testes end-to-end
+9. Deploy Vercel
