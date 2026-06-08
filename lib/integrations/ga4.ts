@@ -9,13 +9,16 @@ interface GA4ConversionData {
   medium: string;
 }
 
+import { resolveIntegrationConfig } from "@/lib/integrations/config";
+
 export async function getConversions(days: number): Promise<GA4ConversionData[]> {
-  if (!process.env.GA4_PROPERTY_ID || !process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  const config = await resolveIntegrationConfig();
+  if (!config.ga4) {
     return [];
   }
 
   const credentials = JSON.parse(
-    Buffer.from(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON, "base64").toString("utf-8")
+    Buffer.from(config.ga4.credentialsJson, "base64").toString("utf-8")
   ) as { client_email: string; private_key: string };
 
   const { BetaAnalyticsDataClient } = await import("@google-analytics/data");
@@ -28,7 +31,7 @@ export async function getConversions(days: number): Promise<GA4ConversionData[]>
   const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
   const [response] = await client.runReport({
-    property: `properties/${process.env.GA4_PROPERTY_ID}`,
+    property: `properties/${config.ga4.propertyId}`,
     dateRanges: [{ startDate: formatDate(startDate), endDate: formatDate(endDate) }],
     dimensions: [{ name: "date" }, { name: "sessionSource" }, { name: "sessionMedium" }],
     metrics: [

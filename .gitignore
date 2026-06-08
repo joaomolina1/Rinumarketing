@@ -22,6 +22,7 @@
 
 # extracted zip contents (reference only)
 /extracted/
+/_ref-*/
 
 # misc
 .DS_Store

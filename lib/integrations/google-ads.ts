@@ -1,30 +1,34 @@
 import { GoogleAdsApi } from "google-ads-api";
 import type { GoogleCampaignPerformance, GoogleKeywordAnalysis } from "@/types/google-ads";
+import { resolveIntegrationConfig } from "@/lib/integrations/config";
+import type { ResolvedIntegrationConfig } from "@/types/integrations";
 
-function getGoogleAdsClient() {
+function getGoogleAdsClient(config: NonNullable<ResolvedIntegrationConfig["googleAds"]>) {
   return new GoogleAdsApi({
-    client_id: process.env.GOOGLE_ADS_CLIENT_ID!,
-    client_secret: process.env.GOOGLE_ADS_CLIENT_SECRET!,
-    developer_token: process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    developer_token: config.developerToken,
   });
 }
 
-function getCustomer() {
-  const client = getGoogleAdsClient();
+async function getCustomer() {
+  const config = await resolveIntegrationConfig();
+  if (!config.googleAds) return null;
+
+  const client = getGoogleAdsClient(config.googleAds);
   return client.Customer({
-    customer_id: process.env.GOOGLE_ADS_CUSTOMER_ID!,
-    refresh_token: process.env.GOOGLE_ADS_REFRESH_TOKEN!,
+    customer_id: config.googleAds.customerId,
+    refresh_token: config.googleAds.refreshToken,
   });
 }
 
 export async function getCampaignsPerformance(
   days: number
 ): Promise<GoogleCampaignPerformance[]> {
-  if (!process.env.GOOGLE_ADS_CUSTOMER_ID) {
+  const customer = await getCustomer();
+  if (!customer) {
     return [];
   }
-
-  const customer = getCustomer();
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
@@ -65,11 +69,10 @@ export async function getKeywordsAnalysis(
   campaignId: string,
   minImpressions = 100
 ): Promise<GoogleKeywordAnalysis[]> {
-  if (!process.env.GOOGLE_ADS_CUSTOMER_ID) {
+  const customer = await getCustomer();
+  if (!customer) {
     return [];
   }
-
-  const customer = getCustomer();
 
   const rows = await customer.query(`
     SELECT

@@ -13,7 +13,7 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#f8f9fa]">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar userEmail={user?.email} />

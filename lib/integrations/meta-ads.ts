@@ -1,16 +1,20 @@
 import type { MetaCampaignInsight, MetaCreativeInsight } from "@/types/meta-ads";
+import { resolveIntegrationConfig } from "@/lib/integrations/config";
 
 const META_API_BASE = "https://graph.facebook.com/v21.0";
 
-function getMetaConfig() {
-  return {
-    accessToken: process.env.META_ACCESS_TOKEN!,
-    adAccountId: process.env.META_AD_ACCOUNT_ID!,
-  };
+async function getMetaConfig() {
+  const config = await resolveIntegrationConfig();
+  if (!config.meta) return null;
+  return config.meta;
 }
 
 async function metaFetch<T>(endpoint: string): Promise<T> {
-  const { accessToken } = getMetaConfig();
+  const meta = await getMetaConfig();
+  if (!meta) {
+    throw new Error("Meta não configurada");
+  }
+  const { accessToken } = meta;
   const url = `${META_API_BASE}${endpoint}${endpoint.includes("?") ? "&" : "?"}access_token=${accessToken}`;
   const res = await fetch(url);
   if (!res.ok) {
@@ -20,11 +24,12 @@ async function metaFetch<T>(endpoint: string): Promise<T> {
 }
 
 export async function getCampaignsInsights(days: number): Promise<MetaCampaignInsight[]> {
-  if (!process.env.META_ACCESS_TOKEN || !process.env.META_AD_ACCOUNT_ID) {
+  const meta = await getMetaConfig();
+  if (!meta) {
     return [];
   }
 
-  const { adAccountId } = getMetaConfig();
+  const { adAccountId } = meta;
   const since = new Date();
   since.setDate(since.getDate() - days);
   const until = new Date();
@@ -73,7 +78,8 @@ export async function getCampaignsInsights(days: number): Promise<MetaCampaignIn
 export async function getCreativeInsights(
   campaignId: string
 ): Promise<MetaCreativeInsight[]> {
-  if (!process.env.META_ACCESS_TOKEN) {
+  const meta = await getMetaConfig();
+  if (!meta) {
     return [];
   }
 
@@ -102,7 +108,9 @@ export async function getCreativeInsights(
 }
 
 export async function pauseAd(adId: string): Promise<{ success: boolean }> {
-  const { accessToken } = getMetaConfig();
+  const meta = await getMetaConfig();
+  if (!meta) return { success: false };
+  const { accessToken } = meta;
   const res = await fetch(`${META_API_BASE}/${adId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -115,7 +123,9 @@ export async function updateCampaignBudget(
   campaignId: string,
   dailyBudgetEur: number
 ): Promise<{ success: boolean }> {
-  const { accessToken } = getMetaConfig();
+  const meta = await getMetaConfig();
+  if (!meta) return { success: false };
+  const { accessToken } = meta;
   const res = await fetch(`${META_API_BASE}/${campaignId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

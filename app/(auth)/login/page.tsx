@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { RinuLogo } from "@/components/brand/RinuLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,12 +38,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">
-            <span className="text-[#E91E8C]">RINU</span> Marketing AI
-          </CardTitle>
+    <div className="flex min-h-screen items-center justify-center bg-[#f8f9fa] px-4">
+      <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-[#5cb7f3]/10 to-transparent" />
+      <Card className="relative w-full max-w-md border-[#e9ecef] bg-white shadow-sm">
+        <CardHeader className="items-center text-center">
+          <RinuLogo />
+          <CardTitle className="mt-4 text-[#272b30]">Marketing AI</CardTitle>
           <CardDescription>Inicie sessão para aceder ao dashboard</CardDescription>
         </CardHeader>
         <CardContent>
@@ -56,6 +57,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="joao@rinu.fun"
+                className="border-[#dee2e6]"
               />
             </div>
             <div className="space-y-2">
@@ -66,10 +68,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="border-[#dee2e6]"
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full bg-[#E91E8C] hover:bg-[#E91E8C]/90" disabled={loading}>
+            {error && <p className="text-sm text-[#cc071e]">{error}</p>}
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "A entrar..." : "Entrar"}
             </Button>
           </form>
