@@ -8,6 +8,7 @@ import { PlatformSummary } from "@/components/dashboard/PlatformSummary";
 import { AnalysisPeriodSelector } from "@/components/dashboard/AnalysisPeriodSelector";
 import { DashboardSyncButton } from "@/components/dashboard/DashboardSyncButton";
 import { DataCoverageAlert } from "@/components/dashboard/DataCoverageAlert";
+import { Ga4OverviewSection } from "@/components/dashboard/Ga4OverviewSection";
 import { formatCurrency } from "@/lib/utils/formatters";
 import {
   getAnalysisDateRange,
@@ -15,6 +16,8 @@ import {
   parseAnalysisDays,
 } from "@/lib/utils/analysis-period";
 import { aggregateDailyKpis } from "@/lib/utils/kpi-aggregation";
+import { getGa4Overview } from "@/lib/integrations/ga4";
+import { resolveIntegrationConfig } from "@/lib/integrations/config";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 
@@ -31,6 +34,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const { startDate, endDate } = getAnalysisDateRange(days);
 
   const supabase = await createClient();
+  const integrationConfig = await resolveIntegrationConfig();
+  const ga4Configured = Boolean(integrationConfig.ga4);
+
+  let ga4Data = null;
+  let ga4Error: string | null = null;
+
+  if (ga4Configured) {
+    try {
+      ga4Data = await getGa4Overview(days);
+    } catch (err) {
+      ga4Error = err instanceof Error ? err.message : "Erro ao ler GA4";
+    }
+  }
 
   const { data: kpis } = await supabase
     .from("daily_kpis")
@@ -63,7 +79,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div>
       <PageHeader
         title="Overview"
-        description={`KPIs consolidados Google Ads + Meta Ads · ${description}`}
+        description={`KPIs Google Ads + Meta Ads + GA4 · ${description}`}
         actions={
           <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-start">
             <DashboardSyncButton />
@@ -84,7 +100,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             icon: "💰",
           },
           {
-            title: "Revenue",
+            title: "Revenue Ads",
             value: formatCurrency(aggregated.totalRevenue),
             icon: "📈",
           },
@@ -94,12 +110,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             icon: "🎯",
           },
           {
-            title: "Conversões",
-            value: String(Math.round(aggregated.totalConversions)),
-            icon: "✅",
+            title: ga4Configured && ga4Data && !ga4Error ? "Sessões GA4" : "Conversões Ads",
+            value:
+              ga4Configured && ga4Data && !ga4Error
+                ? String(ga4Data.totals.sessions)
+                : String(Math.round(aggregated.totalConversions)),
+            icon: ga4Configured ? "📊" : "✅",
           },
         ]}
       />
+
+      <Ga4OverviewSection
+        configured={ga4Configured}
+        propertyId={integrationConfig.ga4?.propertyId}
+        periodLabel={periodLabel}
+        days={days}
+        data={ga4Data}
+        error={ga4Error}
+      />
+
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <SpendChart data={chartData} periodLabel={periodLabel} />
         <RoasChart data={roasData} periodLabel={periodLabel} />

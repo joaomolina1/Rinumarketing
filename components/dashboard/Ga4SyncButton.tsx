@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function Ga4SyncButton() {
+interface Ga4SyncButtonProps {
+  days?: number;
+}
+
+export function Ga4SyncButton({ days = 7 }: Ga4SyncButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -18,7 +22,7 @@ export function Ga4SyncButton() {
       const res = await fetch("/api/data/ga4/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ days: 7 }),
+        body: JSON.stringify({ days }),
       });
       const data = await res.json();
 
@@ -27,7 +31,7 @@ export function Ga4SyncButton() {
         return;
       }
 
-      setMessage(`GA4 OK — ${data.synced ?? 0} linhas (últimos 7 dias)`);
+      setMessage(`GA4 OK — ${data.synced ?? 0} linhas (${days} dias)`);
       router.refresh();
     } catch {
       setMessage("Erro de rede ao testar GA4");
@@ -47,7 +51,7 @@ export function Ga4SyncButton() {
         ) : (
           <>
             <RefreshCw className="size-4" />
-            Testar GA4
+            Carregar GA4
           </>
         )}
       </Button>
