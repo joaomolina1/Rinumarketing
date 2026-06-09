@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "@/lib/anthropic/client";
 import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 import type { AgentAction, AgentResult } from "@/types/agents";
@@ -66,7 +66,7 @@ export async function runMetaAgent(input: RunMetaAgentInput): Promise<AgentResul
       ctr: calculateCtr(c.clicks, c.impressions),
     }));
 
-    const client = new Anthropic();
+    const client = await createAnthropicClient();
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 2048,

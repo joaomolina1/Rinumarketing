@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "@/lib/anthropic/client";
 import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 import type { AgentAction, AgentResult } from "@/types/agents";
@@ -79,7 +79,7 @@ export async function runGoogleAgent(input: RunGoogleAgentInput): Promise<AgentR
       };
     });
 
-    const client = new Anthropic();
+    const client = await createAnthropicClient();
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 2048,
@@ -145,7 +145,10 @@ Responde APENAS com JSON: { "analysis": "...", "actions": [...], "alerts": [...]
       alerts: parsed.alerts ?? [],
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Erro desconhecido";
+    const raw = err instanceof Error ? err.message : String(err);
+    const message = raw.includes("only approved for use with test accounts")
+      ? "Google Ads: Developer Token só permite contas de teste. Pede Basic Access ou usa Customer ID de teste."
+      : raw || "Erro desconhecido";
     if (runRecord) {
       await supabase
         .from("agent_runs")

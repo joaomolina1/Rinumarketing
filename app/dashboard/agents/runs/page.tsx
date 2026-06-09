@@ -22,13 +22,16 @@ export default async function AgentRunsPage() {
             key={run.id}
             className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4"
           >
-            <div>
+            <div className="min-w-0 flex-1 pr-4">
               <p className="font-medium capitalize">{run.agent_name}</p>
               <p className="text-xs text-gray-500">
                 {run.started_at
                   ? format(new Date(run.started_at), "dd/MM/yyyy HH:mm", { locale: pt })
                   : "—"}
               </p>
+              {run.status === "failed" && run.error && (
+                <p className="mt-1 text-xs text-red-600">{run.error}</p>
+              )}
             </div>
             <Badge
               variant={

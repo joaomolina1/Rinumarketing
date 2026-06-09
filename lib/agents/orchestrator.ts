@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "@/lib/anthropic/client";
 import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 import type { AgentAction, AgentResult, ActionStatus } from "@/types/agents";
@@ -350,7 +350,7 @@ interface LLMSynthesisOutput {
 }
 
 async function synthesizeWithLLM(input: LLMSynthesisInput): Promise<LLMSynthesisOutput> {
-  const client = new Anthropic();
+  const client = await createAnthropicClient();
 
   const userMessage = `
 # Resultados dos agentes

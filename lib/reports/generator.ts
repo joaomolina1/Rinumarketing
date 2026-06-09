@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "@/lib/anthropic/client";
 import { createAdminClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { subDays, startOfWeek, endOfWeek, format } from "date-fns";
@@ -35,7 +35,7 @@ export async function generateWeeklyReport(period: "last_week" | "custom" = "las
 
   const roas = totals.spend > 0 ? totals.revenue / totals.spend : 0;
 
-  const client = new Anthropic();
+  const client = await createAnthropicClient();
   const response = await client.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 3000,
