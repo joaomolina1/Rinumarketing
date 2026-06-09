@@ -20,13 +20,21 @@ interface RoasDataPoint {
 interface RoasChartProps {
   data: RoasDataPoint[];
   target?: number;
+  periodLabel?: string;
 }
 
-export function RoasChart({ data, target = 4 }: RoasChartProps) {
+export function RoasChart({ data, target = 4, periodLabel }: RoasChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-semibold">ROAS por Canal</CardTitle>
+        <CardTitle className="text-base font-semibold">
+          ROAS por Canal
+          {periodLabel && (
+            <span className="ml-2 text-sm font-normal text-[#6a7178]">
+              · {periodLabel}
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={250}>

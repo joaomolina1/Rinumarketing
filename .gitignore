@@ -41,6 +41,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local oauth / seed artifacts
+.seed-integration.sql
+scripts/ga4-oauth-open.html
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

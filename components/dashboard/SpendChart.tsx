@@ -20,13 +20,21 @@ interface SpendDataPoint {
 
 interface SpendChartProps {
   data: SpendDataPoint[];
+  periodLabel?: string;
 }
 
-export function SpendChart({ data }: SpendChartProps) {
+export function SpendChart({ data, periodLabel }: SpendChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-semibold">Spend por Canal</CardTitle>
+        <CardTitle className="text-base font-semibold">
+          Spend por Canal
+          {periodLabel && (
+            <span className="ml-2 text-sm font-normal text-[#6a7178]">
+              · {periodLabel}
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>

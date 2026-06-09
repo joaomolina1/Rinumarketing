@@ -1,32 +1,38 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
 import { SpendChart } from "@/components/dashboard/SpendChart";
 import { RoasChart } from "@/components/dashboard/RoasChart";
 import { PlatformSummary } from "@/components/dashboard/PlatformSummary";
+import { AnalysisPeriodSelector } from "@/components/dashboard/AnalysisPeriodSelector";
 import { formatCurrency } from "@/lib/utils/formatters";
-import { calculateRoas } from "@/lib/utils/metrics";
+import {
+  getAnalysisPeriodLabel,
+  parseAnalysisDays,
+} from "@/lib/utils/analysis-period";
+import { aggregateDailyKpis } from "@/lib/utils/kpi-aggregation";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: Promise<{ days?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const params = await searchParams;
+  const days = parseAnalysisDays(params.days);
+  const periodLabel = getAnalysisPeriodLabel(days);
+
   const supabase = await createClient();
 
   const { data: kpis } = await supabase
     .from("daily_kpis")
     .select("*")
     .order("date", { ascending: false })
-    .limit(30);
+    .limit(days);
 
-  const latest = kpis?.[0];
-  const totalSpend = latest?.total_spend ?? 0;
-  const totalRevenue = latest?.total_revenue ?? 0;
-  const blendedRoas = latest?.blended_roas ?? 0;
-
-  const googleSpend = kpis?.reduce((s, k) => s + (k.google_spend ?? 0), 0) ?? 0;
-  const googleRevenue = kpis?.reduce((s, k) => s + (k.google_revenue ?? 0), 0) ?? 0;
-  const metaSpend = kpis?.reduce((s, k) => s + (k.meta_spend ?? 0), 0) ?? 0;
-  const metaRevenue = kpis?.reduce((s, k) => s + (k.meta_revenue ?? 0), 0) ?? 0;
+  const aggregated = aggregateDailyKpis(kpis ?? []);
 
   const chartData = (kpis ?? [])
     .slice()
@@ -38,46 +44,61 @@ export default async function DashboardPage() {
     }));
 
   const roasData = [
-    { channel: "Google", roas: calculateRoas(googleRevenue, googleSpend) },
-    { channel: "Meta", roas: calculateRoas(metaRevenue, metaSpend) },
-    { channel: "Blended", roas: blendedRoas },
+    { channel: "Google", roas: aggregated.googleRoas },
+    { channel: "Meta", roas: aggregated.metaRoas },
+    { channel: "Blended", roas: aggregated.blendedRoas },
   ];
 
   return (
     <div>
       <PageHeader
         title="Overview"
-        description="KPIs consolidados Google Ads + Meta Ads"
+        description={`KPIs consolidados Google Ads + Meta Ads · ${periodLabel}`}
+        actions={
+          <Suspense fallback={null}>
+            <AnalysisPeriodSelector value={days} />
+          </Suspense>
+        }
       />
       <KpiGrid
         items={[
-          { title: "Spend Total", value: formatCurrency(totalSpend), icon: "💰" },
-          { title: "Revenue", value: formatCurrency(totalRevenue), icon: "📈" },
-          { title: "ROAS Blended", value: `${blendedRoas.toFixed(2)}x`, icon: "🎯" },
+          {
+            title: "Spend Total",
+            value: formatCurrency(aggregated.totalSpend),
+            icon: "💰",
+          },
+          {
+            title: "Revenue",
+            value: formatCurrency(aggregated.totalRevenue),
+            icon: "📈",
+          },
+          {
+            title: "ROAS Blended",
+            value: `${aggregated.blendedRoas.toFixed(2)}x`,
+            icon: "🎯",
+          },
           {
             title: "Conversões",
-            value: String(
-              (latest?.google_conversions ?? 0) + (latest?.meta_conversions ?? 0)
-            ),
+            value: String(Math.round(aggregated.totalConversions)),
             icon: "✅",
           },
         ]}
       />
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <SpendChart data={chartData} />
-        <RoasChart data={roasData} />
+        <SpendChart data={chartData} periodLabel={periodLabel} />
+        <RoasChart data={roasData} periodLabel={periodLabel} />
       </div>
       <div className="mt-8">
         <PlatformSummary
           google={{
-            spend: googleSpend,
-            revenue: googleRevenue,
-            roas: calculateRoas(googleRevenue, googleSpend),
+            spend: aggregated.googleSpend,
+            revenue: aggregated.googleRevenue,
+            roas: aggregated.googleRoas,
           }}
           meta={{
-            spend: metaSpend,
-            revenue: metaRevenue,
-            roas: calculateRoas(metaRevenue, metaSpend),
+            spend: aggregated.metaSpend,
+            revenue: aggregated.metaRevenue,
+            roas: aggregated.metaRoas,
           }}
         />
       </div>

@@ -9,7 +9,10 @@
     "lint": "eslint",
     "google:refresh-token": "node scripts/get-google-ads-refresh-token.mjs",
     "meta:long-token": "node scripts/meta-long-lived-token.mjs",
-    "meta:test": "node scripts/test-meta.mjs"
+    "meta:test": "node scripts/test-meta.mjs",
+    "ga4:grant-access": "node scripts/grant-ga4-access.mjs",
+    "ga4:grant-access:token": "node scripts/grant-ga4-access.mjs",
+    "ga4:test": "node scripts/test-ga4.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.102.0",

@@ -19,10 +19,16 @@ export async function getConversions(days: number): Promise<GA4ConversionData[]>
 
   const credentials = JSON.parse(
     Buffer.from(config.ga4.credentialsJson, "base64").toString("utf-8")
-  ) as { client_email: string; private_key: string };
+  ) as { client_email: string; private_key: string; project_id?: string };
 
   const { BetaAnalyticsDataClient } = await import("@google-analytics/data");
-  const client = new BetaAnalyticsDataClient({ credentials });
+  const client = new BetaAnalyticsDataClient({
+    projectId: credentials.project_id,
+    credentials: {
+      client_email: credentials.client_email,
+      private_key: credentials.private_key,
+    },
+  });
 
   const endDate = new Date();
   const startDate = new Date();
