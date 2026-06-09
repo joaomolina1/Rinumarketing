@@ -101,6 +101,8 @@ export async function getKeywordsAnalysis(
   }));
 }
 
+// NOTA: escrita no Google Ads está simulada enquanto o developer token estiver
+// em modo de teste. Quando tiver Basic Access, substituir por mutates reais.
 export async function adjustBid(
   entityType: "keyword" | "ad_group",
   entityId: string,
@@ -108,7 +110,7 @@ export async function adjustBid(
 ): Promise<{ success: boolean; message: string }> {
   return {
     success: true,
-    message: `Bid ajustado ${adjustmentPercent}% para ${entityType} ${entityId}`,
+    message: `(simulado) Bid ajustado ${adjustmentPercent}% para ${entityType} ${entityId}`,
   };
 }
 
@@ -118,6 +120,6 @@ export async function pauseEntity(
 ): Promise<{ success: boolean; message: string }> {
   return {
     success: true,
-    message: `${entityType} ${entityId} pausado`,
+    message: `(simulado) ${entityType} ${entityId} pausado`,
   };
 }

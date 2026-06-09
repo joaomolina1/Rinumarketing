@@ -25,7 +25,7 @@ interface SpendChartProps {
 
 export function SpendChart({ data, periodLabel }: SpendChartProps) {
   return (
-    <Card>
+    <Card className="border-[#e9ecef] shadow-sm">
       <CardHeader>
         <CardTitle className="text-base font-semibold">
           Spend por Canal

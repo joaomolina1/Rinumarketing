@@ -68,5 +68,13 @@ export async function executeAction(
     }
   }
 
+  if (action.action_type === "refresh_creative") {
+    return {
+      success: false,
+      message:
+        "Renovar criativo não tem execução automática — trata manualmente no gestor de anúncios.",
+    };
+  }
+
   return { success: false, message: `Tipo de ação não suportado: ${action.action_type}` };
 }

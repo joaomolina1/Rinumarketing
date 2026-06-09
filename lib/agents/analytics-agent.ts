@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 import type { AgentAction, AgentResult } from "@/types/agents";
 import type { RecentDecision } from "./memory";
+import { getSkillsPromptBlock } from "./skills";
 import { getAttributionData } from "@/lib/integrations/ga4";
 import { detectRoasAnomaly, detectSpendAnomaly } from "@/lib/utils/anomalies";
 
@@ -91,11 +92,12 @@ export async function runAnalyticsAgent(
       if (roasAnomaly) anomalies.push(roasAnomaly);
     }
 
+    const skillsBlock = await getSkillsPromptBlock("analytics");
     const client = await createAnthropicClient();
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 2048,
-      system: ANALYTICS_AGENT_SYSTEM_PROMPT,
+      system: `${ANALYTICS_AGENT_SYSTEM_PROMPT}${skillsBlock ? `\n\n${skillsBlock}` : ""}`,
       messages: [
         {
           role: "user",

@@ -6,6 +6,7 @@ import { runGoogleAgent } from "./google-agent";
 import { runMetaAgent } from "./meta-agent";
 import { runAnalyticsAgent } from "./analytics-agent";
 import { getRecentDecisions, saveDecision } from "./memory";
+import { getSkillsPromptBlock } from "./skills";
 import { notifySlack } from "@/lib/notifications/slack";
 import { getOwnerAgentSettings } from "@/lib/settings/agent-settings";
 import { classifyActions, getBudgetDelta } from "@/lib/agents/guardrails";
@@ -350,6 +351,7 @@ interface LLMSynthesisOutput {
 }
 
 async function synthesizeWithLLM(input: LLMSynthesisInput): Promise<LLMSynthesisOutput> {
+  const skillsBlock = await getSkillsPromptBlock("orchestrator");
   const client = await createAnthropicClient();
 
   const userMessage = `
@@ -360,6 +362,7 @@ Analytics: ${input.agentResults.find((r) => r.agent_name === "analytics")?.analy
 
 Acções (${input.allActions.length}): ${JSON.stringify(input.allActions, null, 2)}
 Alertas: ${input.allAlerts.join("\n") || "Nenhum"}
+${input.manualInstruction ? `\nInstrução do utilizador para esta corrida: ${input.manualInstruction}` : ""}
 
 Responde APENAS com JSON.
 `.trim();
@@ -367,7 +370,7 @@ Responde APENAS com JSON.
   const response = await client.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 2048,
-    system: ORCHESTRATOR_SYSTEM_PROMPT,
+    system: `${ORCHESTRATOR_SYSTEM_PROMPT}${skillsBlock ? `\n\n${skillsBlock}` : ""}`,
     messages: [{ role: "user", content: userMessage }],
   });
 

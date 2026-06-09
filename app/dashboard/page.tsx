@@ -7,9 +7,10 @@ import { RoasChart } from "@/components/dashboard/RoasChart";
 import { PlatformSummary } from "@/components/dashboard/PlatformSummary";
 import { AnalysisPeriodSelector } from "@/components/dashboard/AnalysisPeriodSelector";
 import { DashboardSyncButton } from "@/components/dashboard/DashboardSyncButton";
+import { Ga4SyncButton } from "@/components/dashboard/Ga4SyncButton";
 import { DataCoverageAlert } from "@/components/dashboard/DataCoverageAlert";
-import { Ga4OverviewSection } from "@/components/dashboard/Ga4OverviewSection";
-import { formatCurrency } from "@/lib/utils/formatters";
+import { Ga4TrafficCard } from "@/components/dashboard/Ga4TrafficCard";
+import { formatCurrency, formatNumber } from "@/lib/utils/formatters";
 import {
   getAnalysisDateRange,
   getAnalysisPeriodLabel,
@@ -72,17 +73,42 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const description =
     availableDays < days
-      ? `${periodLabel} · ${availableDays} de ${days} dias com dados (${startDate} → ${endDate})`
-      : `${periodLabel} · ${startDate} → ${endDate}`;
+      ? `${periodLabel} · ${availableDays}/${days} dias sincronizados`
+      : periodLabel;
+
+  const kpiItems = [
+    { title: "Spend Total", value: formatCurrency(aggregated.totalSpend) },
+    { title: "Revenue", value: formatCurrency(aggregated.totalRevenue) },
+    { title: "ROAS Blended", value: `${aggregated.blendedRoas.toFixed(2)}x` },
+    {
+      title: "Conversões Ads",
+      value: String(Math.round(aggregated.totalConversions)),
+    },
+    {
+      title: "Sessões (site)",
+      value: ga4Configured && !ga4Error
+        ? formatNumber(ga4Data?.totals.sessions ?? 0)
+        : "—",
+    },
+    {
+      title: "Conv. site",
+      value: ga4Configured && !ga4Error
+        ? formatNumber(ga4Data?.totals.conversions ?? 0)
+        : "—",
+    },
+  ];
 
   return (
     <div>
       <PageHeader
         title="Overview"
-        description={`KPIs Google Ads + Meta Ads + GA4 · ${description}`}
+        description={description}
         actions={
-          <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-start">
-            <DashboardSyncButton />
+          <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+              <DashboardSyncButton />
+              {ga4Configured && <Ga4SyncButton days={days} />}
+            </div>
             <Suspense fallback={null}>
               <AnalysisPeriodSelector value={days} />
             </Suspense>
@@ -92,48 +118,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       <DataCoverageAlert selectedDays={days} availableDays={availableDays} />
 
-      <KpiGrid
-        items={[
-          {
-            title: "Spend Total",
-            value: formatCurrency(aggregated.totalSpend),
-            icon: "💰",
-          },
-          {
-            title: "Revenue Ads",
-            value: formatCurrency(aggregated.totalRevenue),
-            icon: "📈",
-          },
-          {
-            title: "ROAS Blended",
-            value: `${aggregated.blendedRoas.toFixed(2)}x`,
-            icon: "🎯",
-          },
-          {
-            title: ga4Configured && ga4Data && !ga4Error ? "Sessões GA4" : "Conversões Ads",
-            value:
-              ga4Configured && ga4Data && !ga4Error
-                ? String(ga4Data.totals.sessions)
-                : String(Math.round(aggregated.totalConversions)),
-            icon: ga4Configured ? "📊" : "✅",
-          },
-        ]}
-      />
+      <KpiGrid items={kpiItems} />
 
-      <Ga4OverviewSection
-        configured={ga4Configured}
-        propertyId={integrationConfig.ga4?.propertyId}
-        periodLabel={periodLabel}
-        days={days}
-        data={ga4Data}
-        error={ga4Error}
-      />
+      <div className="mt-8">
+        <Ga4TrafficCard
+          dailySessions={ga4Data?.dailySessions ?? []}
+          topChannels={ga4Data?.topChannels ?? []}
+          periodLabel={periodLabel}
+          days={days}
+          configured={ga4Configured}
+          error={ga4Error}
+        />
+      </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <SpendChart data={chartData} periodLabel={periodLabel} />
         <RoasChart data={roasData} periodLabel={periodLabel} />
       </div>
-      <div className="mt-8">
+
+      <div className="mt-6">
         <PlatformSummary
           google={{
             spend: aggregated.googleSpend,

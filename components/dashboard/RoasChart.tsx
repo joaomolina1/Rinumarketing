@@ -25,7 +25,7 @@ interface RoasChartProps {
 
 export function RoasChart({ data, target = 4, periodLabel }: RoasChartProps) {
   return (
-    <Card>
+    <Card className="border-[#e9ecef] shadow-sm">
       <CardHeader>
         <CardTitle className="text-base font-semibold">
           ROAS por Canal

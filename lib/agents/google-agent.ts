@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 import type { AgentAction, AgentResult } from "@/types/agents";
 import type { RecentDecision } from "./memory";
+import { getSkillsPromptBlock } from "./skills";
 import {
   getCampaignsPerformance,
   getKeywordsAnalysis,
@@ -79,11 +80,12 @@ export async function runGoogleAgent(input: RunGoogleAgentInput): Promise<AgentR
       };
     });
 
+    const skillsBlock = await getSkillsPromptBlock("google");
     const client = await createAnthropicClient();
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 2048,
-      system: GOOGLE_AGENT_SYSTEM_PROMPT,
+      system: `${GOOGLE_AGENT_SYSTEM_PROMPT}${skillsBlock ? `\n\n${skillsBlock}` : ""}`,
       messages: [
         {
           role: "user",

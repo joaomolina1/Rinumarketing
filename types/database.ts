@@ -321,6 +321,32 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["agent_settings"]["Insert"]>;
         Relationships: [];
       };
+      agent_skills: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          content: string;
+          applies_to: string[];
+          enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          content?: string;
+          applies_to?: string[];
+          enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["agent_skills"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

@@ -16,13 +16,13 @@ export function KpiCard({ title, value, change, changeType = "neutral", icon }: 
   };
 
   return (
-    <Card>
+    <Card className="border-[#e9ecef] shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-gray-600">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-[#6a7178]">{title}</CardTitle>
         {icon && <span className="text-lg">{icon}</span>}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-gray-900">{value}</div>
+        <div className="text-2xl font-semibold tabular-nums text-[#272b30]">{value}</div>
         {change && (
           <p className={`mt-1 text-xs ${changeColors[changeType]}`}>{change}</p>
         )}

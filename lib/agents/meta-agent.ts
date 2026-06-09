@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 import type { AgentAction, AgentResult } from "@/types/agents";
 import type { RecentDecision } from "./memory";
+import { getSkillsPromptBlock } from "./skills";
 import { getCampaignsInsights } from "@/lib/integrations/meta-ads";
 import { calculateRoas, calculateCtr } from "@/lib/utils/metrics";
 
@@ -66,11 +67,12 @@ export async function runMetaAgent(input: RunMetaAgentInput): Promise<AgentResul
       ctr: calculateCtr(c.clicks, c.impressions),
     }));
 
+    const skillsBlock = await getSkillsPromptBlock("meta");
     const client = await createAnthropicClient();
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 2048,
-      system: META_AGENT_SYSTEM_PROMPT,
+      system: `${META_AGENT_SYSTEM_PROMPT}${skillsBlock ? `\n\n${skillsBlock}` : ""}`,
       messages: [
         {
           role: "user",
