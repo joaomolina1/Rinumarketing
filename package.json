@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "google:refresh-token": "node scripts/get-google-ads-refresh-token.mjs",
+    "meta:long-token": "node scripts/meta-long-lived-token.mjs",
+    "meta:test": "node scripts/test-meta.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.102.0",
