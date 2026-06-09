@@ -4,6 +4,7 @@ import { GoogleAdsApi } from "google-ads-api";
 import { createClient } from "@/lib/supabase/server";
 import {
   getSettingsForUser,
+  prepareIntegrationPayload,
   settingsToResolvedConfig,
   upsertSettingsForUser,
 } from "@/lib/settings/integrations";
@@ -23,13 +24,35 @@ async function mergeTestConfig(
     return settingsToResolvedConfig(existing);
   }
 
-  const merged = await upsertSettingsForUser(userId, values, existing);
+  const merged = await upsertSettingsForUser(
+    userId,
+    prepareIntegrationPayload(values),
+    existing
+  );
   return settingsToResolvedConfig(merged);
+}
+
+function formatGoogleAdsError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes("only approved for use with test accounts")) {
+    return (
+      "OAuth OK, mas o Developer Token só permite contas de TESTE. " +
+      "Pede Basic Access em ads.google.com/aw/apicenter ou usa um Customer ID de teste. " +
+      "Podes guardar as credenciais e continuar — o sync real só funciona após aprovação."
+    );
+  }
+  if (msg.includes("INVALID_CUSTOMER_ID")) {
+    return "Customer ID inválido. Usa só números (ex: 3611270397), sem hífens.";
+  }
+  if (msg.includes("UNAUTHENTICATED") || msg.includes("invalid_grant")) {
+    return "Refresh token inválido ou expirado. Gera um novo com npm run google:refresh-token.";
+  }
+  return msg.slice(0, 280);
 }
 
 async function testGoogleAds(config: Awaited<ReturnType<typeof settingsToResolvedConfig>>) {
   if (!config.googleAds) {
-    throw new Error("Preencha todos os campos do Google Ads");
+    throw new Error("Preencha Client ID, Secret, Refresh Token, Developer Token e Customer ID");
   }
 
   const client = new GoogleAdsApi({
@@ -43,16 +66,20 @@ async function testGoogleAds(config: Awaited<ReturnType<typeof settingsToResolve
     refresh_token: config.googleAds.refreshToken,
   });
 
-  const rows = await customer.query(`
-    SELECT campaign.id, campaign.name
-    FROM campaign
-    LIMIT 1
-  `);
+  try {
+    const rows = await customer.query(`
+      SELECT campaign.id, campaign.name
+      FROM campaign
+      LIMIT 1
+    `);
 
-  return {
-    ok: true,
-    message: `Ligação OK — ${rows.length > 0 ? "campanhas encontradas" : "conta acessível"}`,
-  };
+    return {
+      ok: true,
+      message: `Ligação OK — ${rows.length > 0 ? "campanhas encontradas" : "conta acessível"}`,
+    };
+  } catch (err) {
+    throw new Error(formatGoogleAdsError(err));
+  }
 }
 
 async function testMeta(config: Awaited<ReturnType<typeof settingsToResolvedConfig>>) {

@@ -219,7 +219,11 @@ export async function upsertSettingsForUser(
 
   for (const field of SECRET_FIELDS) {
     const value = input[field as keyof IntegrationSettingsInput];
-    if (typeof value === "string" && value.includes("••••")) {
+    if (
+      typeof value !== "string" ||
+      !value.trim() ||
+      value.includes("••••")
+    ) {
       delete payload[field as keyof IntegrationSettingsInput];
     }
   }
@@ -233,6 +237,23 @@ export async function upsertSettingsForUser(
 
   if (error) throw error;
   return data as IntegrationSettings;
+}
+
+/** Remove vazios e secrets mascarados antes de enviar à API */
+export function prepareIntegrationPayload(
+  input: Record<string, string | number | null | undefined>
+): IntegrationSettingsInput {
+  const out: IntegrationSettingsInput = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "string") {
+      if (!value.trim() || value.includes("••••")) continue;
+      (out as Record<string, string>)[key] = value.trim();
+    } else {
+      (out as Record<string, number>)[key] = value;
+    }
+  }
+  return out;
 }
 
 export function isOnboardingComplete(settings: IntegrationSettings | null) {

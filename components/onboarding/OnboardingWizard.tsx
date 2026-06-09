@@ -155,12 +155,29 @@ export function OnboardingWizard({ mode = "onboarding" }: OnboardingWizardProps)
     setMessage(null);
   }
 
-  async function saveProgress(nextStep = step, complete = false) {
+  async function saveProgress(
+    nextStep = step,
+    complete = false,
+    fieldsToSave?: string[]
+  ) {
     setSaving(true);
     setError(null);
 
+    const keys =
+      fieldsToSave ??
+      (mode === "settings"
+        ? Object.keys(form)
+        : stepFields);
+
+    const stepOnly = Object.fromEntries(
+      keys.map((field) => [field, form[field] ?? ""]).filter(([, v]) => {
+        const s = String(v);
+        return s.trim() && !s.includes("••••");
+      })
+    );
+
     const payload: Record<string, string | number | null> = {
-      ...form,
+      ...stepOnly,
       onboarding_step: nextStep,
     };
 
@@ -178,7 +195,13 @@ export function OnboardingWizard({ mode = "onboarding" }: OnboardingWizardProps)
     setSaving(false);
 
     if (!res.ok) {
-      setError(data.error ?? "Não foi possível guardar");
+      const detail =
+        typeof data.error === "string"
+          ? data.error
+          : data.error?.fieldErrors
+            ? JSON.stringify(data.error.fieldErrors)
+            : "Não foi possível guardar";
+      setError(detail);
       return false;
     }
 
@@ -191,7 +214,12 @@ export function OnboardingWizard({ mode = "onboarding" }: OnboardingWizardProps)
     setMessage(null);
 
     const values = Object.fromEntries(
-      stepFields.map((field) => [field, form[field] ?? ""])
+      stepFields
+        .map((field) => [field, form[field] ?? ""])
+        .filter(([, v]) => {
+          const s = String(v);
+          return s.trim() && !s.includes("••••");
+        })
     );
 
     const res = await fetch("/api/settings/integrations/test", {
@@ -214,8 +242,8 @@ export function OnboardingWizard({ mode = "onboarding" }: OnboardingWizardProps)
     return true;
   }
 
-  async function handleNext() {
-    if (currentStep.testTarget) {
+  async function handleNext(skipTest = false) {
+    if (currentStep.testTarget && !skipTest) {
       const ok = await runTest(currentStep.testTarget);
       if (!ok) return;
     }
@@ -582,29 +610,40 @@ export function OnboardingWizard({ mode = "onboarding" }: OnboardingWizardProps)
             </Button>
             <div className="flex gap-2">
               {currentStep.testTarget && (
-                <Button
-                  variant="secondary"
-                  disabled={testing || saving}
-                  onClick={() => runTest(currentStep.testTarget!)}
-                >
-                  {testing ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      A testar...
-                    </>
-                  ) : (
-                    "Testar ligação"
-                  )}
-                </Button>
+                <>
+                  <Button
+                    variant="secondary"
+                    disabled={testing || saving}
+                    onClick={() => runTest(currentStep.testTarget!)}
+                  >
+                    {testing ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        A testar...
+                      </>
+                    ) : (
+                      "Testar ligação"
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={saving || testing}
+                    onClick={() => handleNext(true)}
+                  >
+                    Guardar e continuar
+                  </Button>
+                </>
               )}
               {currentStep.id === "finish" ? (
                 <Button disabled={syncing || saving} onClick={handleFinish}>
                   {syncing ? "A sincronizar..." : "Concluir setup"}
                 </Button>
               ) : (
-                <Button disabled={saving || testing} onClick={handleNext}>
-                  {saving ? "A guardar..." : "Continuar"}
-                </Button>
+                !currentStep.testTarget && (
+                  <Button disabled={saving || testing} onClick={() => handleNext()}>
+                    {saving ? "A guardar..." : "Continuar"}
+                  </Button>
+                )
               )}
             </div>
           </div>

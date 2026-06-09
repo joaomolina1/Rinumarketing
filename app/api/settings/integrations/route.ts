@@ -7,6 +7,7 @@ import {
   isOnboardingComplete,
   sanitizeSettingsForClient,
   settingsToResolvedConfig,
+  prepareIntegrationPayload,
   upsertSettingsForUser,
 } from "@/lib/settings/integrations";
 import { clearIntegrationConfigCache } from "@/lib/integrations/config";
@@ -73,7 +74,11 @@ export async function PUT(req: NextRequest) {
 
   try {
     const existing = await getSettingsForUser(user.id);
-    const saved = await upsertSettingsForUser(user.id, parsed.data, existing);
+    const saved = await upsertSettingsForUser(
+      user.id,
+      prepareIntegrationPayload(parsed.data as Record<string, string | number | null>),
+      existing
+    );
     clearIntegrationConfigCache();
 
     const config = settingsToResolvedConfig(saved);
