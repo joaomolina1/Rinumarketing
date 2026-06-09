@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { authorizeApiRequest } from "@/lib/api/auth";
 
 const schema = z.object({
-  days: z.number().int().min(1).max(30).default(1),
+  days: z.number().int().min(1).max(90).default(30),
 });
 
 export async function POST(req: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
 
   try {
-    const campaigns = await getCampaignsInsights(parsed.success ? parsed.data.days : 1);
+    const campaigns = await getCampaignsInsights(parsed.success ? parsed.data.days : 30);
     const admin = createAdminClient();
 
     if (campaigns.length > 0) {
@@ -54,15 +54,18 @@ export async function POST(req: NextRequest) {
         .eq("date", date)
         .single();
 
-      await admin.from("daily_kpis").upsert({
-        date,
-        google_spend: existing?.google_spend ?? 0,
-        google_conversions: existing?.google_conversions ?? 0,
-        google_revenue: existing?.google_revenue ?? 0,
-        meta_spend: metrics.spend,
-        meta_conversions: metrics.conversions,
-        meta_revenue: metrics.revenue,
-      });
+      await admin.from("daily_kpis").upsert(
+        {
+          date,
+          google_spend: existing?.google_spend ?? 0,
+          google_conversions: existing?.google_conversions ?? 0,
+          google_revenue: existing?.google_revenue ?? 0,
+          meta_spend: metrics.spend,
+          meta_conversions: metrics.conversions,
+          meta_revenue: metrics.revenue,
+        },
+        { onConflict: "date" }
+      );
     }
 
     return NextResponse.json({ synced: campaigns.length });

@@ -6,7 +6,7 @@ import { authorizeApiRequest } from "@/lib/api/auth";
 import { microsToEur } from "@/lib/utils/formatters";
 
 const schema = z.object({
-  days: z.number().int().min(1).max(30).default(1),
+  days: z.number().int().min(1).max(90).default(30),
 });
 
 export async function POST(req: NextRequest) {
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
 
   try {
-    const campaigns = await getCampaignsPerformance(parsed.success ? parsed.data.days : 1);
+    const campaigns = await getCampaignsPerformance(parsed.success ? parsed.data.days : 30);
     const admin = createAdminClient();
 
     if (campaigns.length > 0) {
@@ -53,15 +53,18 @@ export async function POST(req: NextRequest) {
         .eq("date", date)
         .single();
 
-      await admin.from("daily_kpis").upsert({
-        date,
-        google_spend: metrics.spend,
-        google_conversions: metrics.conversions,
-        google_revenue: metrics.revenue,
-        meta_spend: existing?.meta_spend ?? 0,
-        meta_conversions: existing?.meta_conversions ?? 0,
-        meta_revenue: existing?.meta_revenue ?? 0,
-      });
+      await admin.from("daily_kpis").upsert(
+        {
+          date,
+          google_spend: metrics.spend,
+          google_conversions: metrics.conversions,
+          google_revenue: metrics.revenue,
+          meta_spend: existing?.meta_spend ?? 0,
+          meta_conversions: existing?.meta_conversions ?? 0,
+          meta_revenue: existing?.meta_revenue ?? 0,
+        },
+        { onConflict: "date" }
+      );
     }
 
     return NextResponse.json({ synced: campaigns.length });

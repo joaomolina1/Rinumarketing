@@ -265,8 +265,14 @@ export function OnboardingWizard({ mode = "onboarding" }: OnboardingWizardProps)
 
     try {
       await Promise.allSettled([
-        fetch("/api/data/google/sync", { method: "POST", body: "{}" }),
-        fetch("/api/data/meta/sync", { method: "POST", body: "{}" }),
+        fetch("/api/data/google/sync", {
+          method: "POST",
+          body: JSON.stringify({ days: 30 }),
+        }),
+        fetch("/api/data/meta/sync", {
+          method: "POST",
+          body: JSON.stringify({ days: 30 }),
+        }),
       ]);
       setMessage("Integrações guardadas e primeira sincronização iniciada.");
       router.push("/dashboard");

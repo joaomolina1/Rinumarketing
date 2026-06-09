@@ -6,14 +6,19 @@ import { SpendChart } from "@/components/dashboard/SpendChart";
 import { RoasChart } from "@/components/dashboard/RoasChart";
 import { PlatformSummary } from "@/components/dashboard/PlatformSummary";
 import { AnalysisPeriodSelector } from "@/components/dashboard/AnalysisPeriodSelector";
+import { DashboardSyncButton } from "@/components/dashboard/DashboardSyncButton";
+import { DataCoverageAlert } from "@/components/dashboard/DataCoverageAlert";
 import { formatCurrency } from "@/lib/utils/formatters";
 import {
+  getAnalysisDateRange,
   getAnalysisPeriodLabel,
   parseAnalysisDays,
 } from "@/lib/utils/analysis-period";
 import { aggregateDailyKpis } from "@/lib/utils/kpi-aggregation";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+
+export const dynamic = "force-dynamic";
 
 interface DashboardPageProps {
   searchParams: Promise<{ days?: string }>;
@@ -23,25 +28,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const params = await searchParams;
   const days = parseAnalysisDays(params.days);
   const periodLabel = getAnalysisPeriodLabel(days);
+  const { startDate, endDate } = getAnalysisDateRange(days);
 
   const supabase = await createClient();
 
   const { data: kpis } = await supabase
     .from("daily_kpis")
     .select("*")
-    .order("date", { ascending: false })
-    .limit(days);
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: true });
 
+  const availableDays = kpis?.length ?? 0;
   const aggregated = aggregateDailyKpis(kpis ?? []);
 
-  const chartData = (kpis ?? [])
-    .slice()
-    .reverse()
-    .map((k) => ({
-      date: format(new Date(k.date), "dd/MM", { locale: pt }),
-      google: k.google_spend ?? 0,
-      meta: k.meta_spend ?? 0,
-    }));
+  const chartData = (kpis ?? []).map((k) => ({
+    date: format(new Date(k.date), "dd/MM", { locale: pt }),
+    google: k.google_spend ?? 0,
+    meta: k.meta_spend ?? 0,
+  }));
 
   const roasData = [
     { channel: "Google", roas: aggregated.googleRoas },
@@ -49,17 +54,28 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     { channel: "Blended", roas: aggregated.blendedRoas },
   ];
 
+  const description =
+    availableDays < days
+      ? `${periodLabel} · ${availableDays} de ${days} dias com dados (${startDate} → ${endDate})`
+      : `${periodLabel} · ${startDate} → ${endDate}`;
+
   return (
     <div>
       <PageHeader
         title="Overview"
-        description={`KPIs consolidados Google Ads + Meta Ads · ${periodLabel}`}
+        description={`KPIs consolidados Google Ads + Meta Ads · ${description}`}
         actions={
-          <Suspense fallback={null}>
-            <AnalysisPeriodSelector value={days} />
-          </Suspense>
+          <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-start">
+            <DashboardSyncButton />
+            <Suspense fallback={null}>
+              <AnalysisPeriodSelector value={days} />
+            </Suspense>
+          </div>
         }
       />
+
+      <DataCoverageAlert selectedDays={days} availableDays={availableDays} />
+
       <KpiGrid
         items={[
           {

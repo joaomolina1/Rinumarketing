@@ -9,6 +9,7 @@ export const ANALYSIS_PERIOD_OPTIONS = [
 export type AnalysisPeriodDays = (typeof ANALYSIS_PERIOD_OPTIONS)[number]["days"];
 
 export const DEFAULT_ANALYSIS_DAYS: AnalysisPeriodDays = 7;
+export const DEFAULT_SYNC_DAYS = 30;
 export const MAX_ANALYSIS_DAYS = 90;
 
 const ALLOWED_DAYS = new Set<number>(
@@ -26,4 +27,18 @@ export function parseAnalysisDays(value?: string | null): AnalysisPeriodDays {
 export function getAnalysisPeriodLabel(days: number): string {
   const match = ANALYSIS_PERIOD_OPTIONS.find((option) => option.days === days);
   return match ? `Últimos ${match.label}` : `Últimos ${days} dias`;
+}
+
+/** Intervalo [start, end] em YYYY-MM-DD para os últimos N dias (inclui hoje). */
+export function getAnalysisDateRange(days: number) {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - (days - 1));
+
+  const format = (d: Date) => d.toISOString().split("T")[0];
+
+  return {
+    startDate: format(start),
+    endDate: format(end),
+  };
 }

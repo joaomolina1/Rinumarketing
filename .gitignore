@@ -43,6 +43,7 @@ yarn-error.log*
 
 # local oauth / seed artifacts
 .seed-integration.sql
+.backfill-meta.sql
 scripts/ga4-oauth-open.html
 
 # typescript

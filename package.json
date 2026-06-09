@@ -12,7 +12,8 @@
     "meta:test": "node scripts/test-meta.mjs",
     "ga4:grant-access": "node scripts/grant-ga4-access.mjs",
     "ga4:grant-access:token": "node scripts/grant-ga4-access.mjs",
-    "ga4:test": "node scripts/test-ga4.mjs"
+    "ga4:test": "node scripts/test-ga4.mjs",
+    "sync:backfill-meta": "node scripts/backfill-meta-kpis.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.102.0",
