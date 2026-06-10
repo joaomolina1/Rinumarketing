@@ -5,11 +5,11 @@ import {
   getGeninuSettingsForUser,
   upsertGeninuSettingsForUser,
 } from "@/lib/geninu/settings";
-import { GENINU_MODELS } from "@/types/geninu";
+import { isAllowedAnthropicModel, listAnthropicModels } from "@/lib/anthropic/models";
 
 const updateSchema = z.object({
   mode: z.enum(["plan", "execute", "auto"]).optional(),
-  model: z.string().optional(),
+  model: z.string().min(1).max(120).optional(),
 });
 
 export async function GET() {
@@ -19,8 +19,12 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const settings = await getGeninuSettingsForUser(user.id);
-  return NextResponse.json({ settings, models: GENINU_MODELS });
+  const [settings, models] = await Promise.all([
+    getGeninuSettingsForUser(user.id),
+    listAnthropicModels(),
+  ]);
+
+  return NextResponse.json({ settings, models });
 }
 
 export async function PUT(req: NextRequest) {
@@ -36,11 +40,14 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const validModel = GENINU_MODELS.some((m) => m.id === parsed.data.model);
-  if (parsed.data.model && !validModel) {
-    return NextResponse.json({ error: "Modelo inválido" }, { status: 400 });
+  if (parsed.data.model && !(await isAllowedAnthropicModel(parsed.data.model))) {
+    return NextResponse.json(
+      { error: "Modelo não disponível para a tua chave Anthropic" },
+      { status: 400 }
+    );
   }
 
   const saved = await upsertGeninuSettingsForUser(user.id, parsed.data);
-  return NextResponse.json({ settings: saved });
+  const models = await listAnthropicModels();
+  return NextResponse.json({ settings: saved, models });
 }

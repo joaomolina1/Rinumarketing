@@ -7,15 +7,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   GENINU_MODE_OPTIONS,
-  GENINU_MODELS,
   type GeninuMessage,
   type GeninuMode,
+  type GeninuModelOption,
   type GeninuSettings,
 } from "@/types/geninu";
 import { Loader2, Send, Trash2, Sparkles } from "lucide-react";
 
 export function GeninuChat() {
   const [settings, setSettings] = useState<GeninuSettings | null>(null);
+  const [models, setModels] = useState<GeninuModelOption[]>([]);
   const [messages, setMessages] = useState<GeninuMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -30,6 +31,7 @@ export function GeninuChat() {
       const data = await res.json();
       if (res.ok) {
         setSettings(data.settings);
+        setModels(data.models ?? []);
         setMessages(data.messages ?? []);
       }
     } finally {
@@ -52,7 +54,10 @@ export function GeninuChat() {
       body: JSON.stringify(patch),
     });
     const data = await res.json();
-    if (res.ok) setSettings(data.settings);
+    if (res.ok) {
+      setSettings(data.settings);
+      if (data.models?.length) setModels(data.models);
+    }
   }
 
   async function sendMessage() {
@@ -116,6 +121,14 @@ export function GeninuChat() {
   }
 
   const modeMeta = GENINU_MODE_OPTIONS.find((m) => m.key === settings.mode);
+  const modelOptions =
+    models.length > 0
+      ? models.some((m) => m.id === settings.model)
+        ? models
+        : [{ id: settings.model, label: settings.model }, ...models]
+      : settings.model
+        ? [{ id: settings.model, label: settings.model }]
+        : [];
 
   return (
     <div className="flex h-[calc(100vh-12rem)] flex-col gap-4">
@@ -127,11 +140,12 @@ export function GeninuChat() {
         </div>
 
         <select
-          className="h-9 rounded-lg border border-[#dee2e6] bg-white px-3 text-sm"
+          className="h-9 max-w-[min(100%,320px)] rounded-lg border border-[#dee2e6] bg-white px-3 text-sm"
           value={settings.model}
           onChange={(e) => updateSettings({ model: e.target.value })}
+          title={`${modelOptions.length} modelos disponíveis`}
         >
-          {GENINU_MODELS.map((m) => (
+          {modelOptions.map((m) => (
             <option key={m.id} value={m.id}>
               {m.label}
             </option>

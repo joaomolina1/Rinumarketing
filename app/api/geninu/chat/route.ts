@@ -7,6 +7,7 @@ import {
   getGeninuSettingsForUser,
   getRecentGeninuMessages,
 } from "@/lib/geninu/settings";
+import { listAnthropicModels } from "@/lib/anthropic/models";
 
 const chatSchema = z.object({
   message: z.string().trim().min(1).max(8000),
@@ -21,12 +22,13 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const [settings, messages] = await Promise.all([
+  const [settings, messages, models] = await Promise.all([
     getGeninuSettingsForUser(user.id),
     getRecentGeninuMessages(user.id),
+    listAnthropicModels(),
   ]);
 
-  return NextResponse.json({ settings, messages });
+  return NextResponse.json({ settings, messages, models });
 }
 
 export async function POST(req: NextRequest) {
