@@ -7,6 +7,7 @@ import { runMetaAgent } from "./meta-agent";
 import { runAnalyticsAgent } from "./analytics-agent";
 import { getRecentDecisions, saveDecision } from "./memory";
 import { getSkillsPromptBlock } from "./skills";
+import { parseAgentJson, extractAnalysisText } from "./parse-agent-json";
 import { notifySlack } from "@/lib/notifications/slack";
 import { getOwnerAgentSettings } from "@/lib/settings/agent-settings";
 import { classifyActions, getBudgetDelta } from "@/lib/agents/guardrails";
@@ -158,16 +159,23 @@ export async function runOrchestrator(
       }
     }
 
+    const actionableItems = allActions.filter(
+      (a) =>
+        Boolean(a.entity_id?.trim()) &&
+        a.action_type !== "unknown" &&
+        Boolean(a.action_type)
+    );
+
     const orchestratorAnalysis = await synthesizeWithLLM({
       agentResults,
-      allActions,
+      allActions: actionableItems,
       allAlerts,
       recentDecisions,
       manualInstruction: input.manual_instruction,
     });
 
     const prioritizedActions = applyPriorities(
-      allActions,
+      actionableItems,
       orchestratorAnalysis.priority_actions
     );
     const { requiresApproval, autoApproved, blockedAlerts } = classifyActions(
@@ -379,21 +387,25 @@ Responde APENAS com JSON.
     .map((b) => b.text)
     .join("");
 
-  try {
-    return JSON.parse(rawText) as LLMSynthesisOutput;
-  } catch {
+  const parsed = parseAgentJson<LLMSynthesisOutput>(rawText);
+  if (parsed) {
     return {
-      analysis_summary: rawText.slice(0, 500),
-      cross_channel_insights: [],
-      priority_actions: input.allActions.map((_, i) => ({
-        priority: "medium" as const,
-        action_index: i,
-        override_reasoning: "Prioridade padrão",
-      })),
-      budget_conflicts_resolved: [],
-      weekly_outlook: "Análise indisponível.",
+      ...parsed,
+      analysis_summary: extractAnalysisText(parsed.analysis_summary ?? rawText),
     };
   }
+
+  return {
+    analysis_summary: extractAnalysisText(rawText).slice(0, 500),
+    cross_channel_insights: [],
+    priority_actions: input.allActions.map((_, i) => ({
+      priority: "medium" as const,
+      action_index: i,
+      override_reasoning: "Prioridade padrão",
+    })),
+    budget_conflicts_resolved: [],
+    weekly_outlook: "Análise indisponível.",
+  };
 }
 
 function applyPriorities(

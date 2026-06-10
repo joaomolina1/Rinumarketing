@@ -4,6 +4,7 @@ import type { Database, Json } from "@/types/database";
 import type { AgentAction, AgentResult } from "@/types/agents";
 import type { RecentDecision } from "./memory";
 import { getSkillsPromptBlock } from "./skills";
+import { parseAgentJson, extractAnalysisText, formatAgentError } from "./parse-agent-json";
 import { getAttributionData } from "@/lib/integrations/ga4";
 import { detectRoasAnomaly, detectSpendAnomaly } from "@/lib/utils/anomalies";
 
@@ -117,10 +118,15 @@ Responde APENAS com JSON.`,
       .join("");
 
     let parsed: AnalyticsAgentOutput;
-    try {
-      parsed = JSON.parse(rawText) as AnalyticsAgentOutput;
-    } catch {
-      parsed = { analysis: rawText.slice(0, 500), actions: [], alerts: [] };
+    const jsonParsed = parseAgentJson<AnalyticsAgentOutput>(rawText);
+    if (jsonParsed) {
+      parsed = jsonParsed;
+    } else {
+      parsed = {
+        analysis: extractAnalysisText(rawText).slice(0, 2000),
+        actions: [],
+        alerts: ["Resposta do modelo não veio em JSON válido — sem ações extraídas."],
+      };
     }
 
     const anomalyAlerts = anomalies.map((a) => a.message);
@@ -158,7 +164,7 @@ Responde APENAS com JSON.`,
       alerts: allAlerts,
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Erro desconhecido";
+    const message = formatAgentError(err) || "Erro desconhecido";
     if (runRecord) {
       await supabase
         .from("agent_runs")

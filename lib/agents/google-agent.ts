@@ -4,6 +4,7 @@ import type { Database, Json } from "@/types/database";
 import type { AgentAction, AgentResult } from "@/types/agents";
 import type { RecentDecision } from "./memory";
 import { getSkillsPromptBlock } from "./skills";
+import { parseAgentJson, extractAnalysisText, formatAgentError } from "./parse-agent-json";
 import {
   getCampaignsPerformance,
   getKeywordsAnalysis,
@@ -105,13 +106,14 @@ Responde APENAS com JSON: { "analysis": "...", "actions": [...], "alerts": [...]
       .join("");
 
     let parsed: GoogleAgentOutput;
-    try {
-      parsed = JSON.parse(rawText) as GoogleAgentOutput;
-    } catch {
+    const jsonParsed = parseAgentJson<GoogleAgentOutput>(rawText);
+    if (jsonParsed) {
+      parsed = jsonParsed;
+    } else {
       parsed = {
-        analysis: rawText.slice(0, 500),
+        analysis: extractAnalysisText(rawText).slice(0, 2000),
         actions: [],
-        alerts: [],
+        alerts: ["Resposta do modelo não veio em JSON válido — sem ações extraídas."],
       };
     }
 
@@ -147,7 +149,7 @@ Responde APENAS com JSON: { "analysis": "...", "actions": [...], "alerts": [...]
       alerts: parsed.alerts ?? [],
     };
   } catch (err) {
-    const raw = err instanceof Error ? err.message : String(err);
+    const raw = formatAgentError(err);
     const message = raw.includes("only approved for use with test accounts")
       ? "Google Ads: Developer Token só permite contas de teste. Pede Basic Access ou usa Customer ID de teste."
       : raw || "Erro desconhecido";

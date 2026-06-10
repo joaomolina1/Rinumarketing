@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+import { extractAnalysisText } from "@/lib/agents/parse-agent-json";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,9 @@ export default async function RunDetailPage({
   if (!run) notFound();
 
   const output = (run.output as Record<string, unknown> | null) ?? {};
-  const summary = (output.analysis_summary as string) ?? (output.analysis as string) ?? run.reasoning;
+  const summaryRaw =
+    (output.analysis_summary as string) ?? (output.analysis as string) ?? run.reasoning;
+  const summary = summaryRaw ? extractAnalysisText(summaryRaw) : null;
   const insights = (output.cross_channel_insights as string[]) ?? [];
   const alerts = (output.alerts as string[]) ?? [];
   const actions =

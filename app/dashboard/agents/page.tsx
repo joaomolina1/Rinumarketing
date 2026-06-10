@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AgentRunPanel } from "@/components/agents/AgentRunPanel";
+import { AgentsHowItWorks } from "@/components/agents/AgentsHowItWorks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getOwnerAgentSettings } from "@/lib/settings/agent-settings";
@@ -104,6 +105,15 @@ export default async function AgentsPage() {
   const masterOn = settings.agents_master_enabled;
   const modeLabel = settings.mode === "plan" ? "Planeamento" : "Automático";
 
+  const orchestratorRun = runByAgent.orchestrator;
+  const orchestratorOutput = orchestratorRun?.output as Record<string, unknown> | null;
+  const lastRunActions = Array.isArray(orchestratorOutput?.actions_proposed)
+    ? orchestratorOutput.actions_proposed.length
+    : 0;
+  const lastRunPending = Array.isArray(orchestratorOutput?.actions_requiring_approval)
+    ? orchestratorOutput.actions_requiring_approval.length
+    : 0;
+
   return (
     <div>
       <PageHeader
@@ -111,7 +121,16 @@ export default async function AgentsPage() {
         description="O que os agentes fazem, o que propõem e o que conseguem executar"
       />
 
-      {/* Estado atual */}
+      <AgentsHowItWorks
+        mode={settings.mode}
+        masterEnabled={masterOn}
+        lastRunAt={orchestratorRun?.started_at}
+        lastRunActions={lastRunActions}
+        lastRunPending={lastRunPending}
+        pendingCount={pendingCount ?? 0}
+      />
+
+      {/* Estado actual */}
       <Card className="mb-6 border-[#e9ecef] shadow-sm">
         <CardContent className="flex flex-wrap items-center gap-x-8 gap-y-3 p-4">
           <div>

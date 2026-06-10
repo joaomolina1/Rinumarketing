@@ -4,6 +4,7 @@ import type { Database, Json } from "@/types/database";
 import type { AgentAction, AgentResult } from "@/types/agents";
 import type { RecentDecision } from "./memory";
 import { getSkillsPromptBlock } from "./skills";
+import { parseAgentJson, extractAnalysisText, formatAgentError } from "./parse-agent-json";
 import { getCampaignsInsights } from "@/lib/integrations/meta-ads";
 import { calculateRoas, calculateCtr } from "@/lib/utils/metrics";
 
@@ -92,10 +93,15 @@ Responde APENAS com JSON.`,
       .join("");
 
     let parsed: MetaAgentOutput;
-    try {
-      parsed = JSON.parse(rawText) as MetaAgentOutput;
-    } catch {
-      parsed = { analysis: rawText.slice(0, 500), actions: [], alerts: [] };
+    const jsonParsed = parseAgentJson<MetaAgentOutput>(rawText);
+    if (jsonParsed) {
+      parsed = jsonParsed;
+    } else {
+      parsed = {
+        analysis: extractAnalysisText(rawText).slice(0, 2000),
+        actions: [],
+        alerts: ["Resposta do modelo não veio em JSON válido — sem ações extraídas."],
+      };
     }
 
     const actions: AgentAction[] = (parsed.actions ?? []).map((a) => ({
@@ -130,7 +136,7 @@ Responde APENAS com JSON.`,
       alerts: parsed.alerts ?? [],
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Erro desconhecido";
+    const message = formatAgentError(err) || "Erro desconhecido";
     if (runRecord) {
       await supabase
         .from("agent_runs")
