@@ -5,6 +5,7 @@ import type { AgentAction, AgentResult } from "@/types/agents";
 import type { RecentDecision } from "./memory";
 import { getSkillsPromptBlock } from "./skills";
 import { parseAgentJson, extractAnalysisText, formatAgentError } from "./parse-agent-json";
+import { normalizeAgentActions } from "./normalize-action";
 import { getCampaignsInsights } from "@/lib/integrations/meta-ads";
 import { calculateRoas, calculateCtr } from "@/lib/utils/metrics";
 
@@ -104,18 +105,7 @@ Responde APENAS com JSON.`,
       };
     }
 
-    const actions: AgentAction[] = (parsed.actions ?? []).map((a) => ({
-      action_type: a.action_type ?? "unknown",
-      platform: "meta" as const,
-      entity_type: a.entity_type ?? "campaign",
-      entity_id: a.entity_id ?? "",
-      entity_name: a.entity_name,
-      current_value: a.current_value ?? {},
-      proposed_value: a.proposed_value ?? {},
-      reasoning: a.reasoning ?? "",
-      expected_impact: a.expected_impact ?? "",
-      risk_level: a.risk_level ?? "medium",
-    }));
+    const actions = normalizeAgentActions(parsed.actions ?? [], "meta");
 
     if (runRecord) {
       await supabase

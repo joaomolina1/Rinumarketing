@@ -115,7 +115,9 @@ export function AgentControlPanel() {
             </Button>
           ))}
           <Badge variant="secondary" className="ml-auto self-center">
-            {isPlanMode ? "Nada executa sem aprovação" : "Execução com limites"}
+            {isPlanMode
+              ? "Aprovações obrigatórias — nada executa sozinho"
+              : "Execução automática dentro dos limites"}
           </Badge>
         </CardContent>
       </Card>

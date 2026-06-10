@@ -119,6 +119,21 @@ export async function pauseAd(adId: string): Promise<{ success: boolean }> {
   return { success: res.ok };
 }
 
+export async function pauseCampaign(campaignId: string): Promise<{ success: boolean; message?: string }> {
+  const meta = await getMetaConfig();
+  if (!meta) return { success: false, message: "Meta não configurada" };
+  const { accessToken } = meta;
+  const res = await fetch(`${META_API_BASE}/${campaignId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "PAUSED", access_token: accessToken }),
+  });
+  return {
+    success: res.ok,
+    message: res.ok ? "Campanha pausada" : "Falha ao pausar campanha",
+  };
+}
+
 export async function updateCampaignBudget(
   campaignId: string,
   dailyBudgetEur: number

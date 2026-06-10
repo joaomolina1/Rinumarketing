@@ -1,5 +1,5 @@
 import { adjustBid, pauseEntity } from "@/lib/integrations/google-ads";
-import { pauseAd, updateCampaignBudget } from "@/lib/integrations/meta-ads";
+import { pauseAd, pauseCampaign, updateCampaignBudget } from "@/lib/integrations/meta-ads";
 import type { AgentAction } from "@/types/agents";
 import type { AgentSettings } from "@/types/agent-settings";
 import { canExecuteAction } from "@/lib/agents/guardrails";
@@ -55,6 +55,13 @@ export async function executeAction(
 
   if (action.platform === "meta") {
     if (action.action_type.includes("pause")) {
+      if (action.entity_type === "campaign") {
+        const result = await pauseCampaign(action.entity_id);
+        return {
+          success: result.success,
+          message: result.message ?? (result.success ? "Campanha pausada" : "Falha"),
+        };
+      }
       const result = await pauseAd(action.entity_id);
       return { success: result.success, message: result.success ? "Anúncio pausado" : "Falha ao pausar" };
     }

@@ -13,6 +13,7 @@ import {
   Megaphone,
   Search,
   Settings,
+  Sparkles,
   ShieldCheck,
 } from "lucide-react";
 import { RinuLogo } from "@/components/brand/RinuLogo";
@@ -31,6 +32,7 @@ const navGroups = [
   {
     label: "Agentes",
     items: [
+      { href: "/dashboard/geninu", label: "Geninu", icon: Sparkles },
       { href: "/dashboard/agents", label: "Centro de Agentes", icon: Bot },
       { href: "/dashboard/agents/actions", label: "Aprovações", icon: CheckSquare },
       { href: "/dashboard/agents/skills", label: "Skills", icon: BookOpen },
@@ -71,6 +73,7 @@ export function Sidebar() {
                 pathname === item.href ||
                 (item.href !== "/dashboard" &&
                   item.href !== "/dashboard/agents" &&
+                  item.href !== "/dashboard/geninu" &&
                   pathname.startsWith(item.href + "/"));
               const Icon = item.icon;
 

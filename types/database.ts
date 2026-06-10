@@ -347,6 +347,40 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["agent_skills"]["Insert"]>;
         Relationships: [];
       };
+      geninu_settings: {
+        Row: {
+          user_id: string;
+          mode: string;
+          model: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          mode?: string;
+          model?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["geninu_settings"]["Insert"]>;
+        Relationships: [];
+      };
+      geninu_messages: {
+        Row: {
+          id: string;
+          user_id: string;
+          role: string;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          role: string;
+          content: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["geninu_messages"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
